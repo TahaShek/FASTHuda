@@ -630,7 +630,10 @@ section { position:relative; z-index:2; overflow:hidden; }
 <!-- Progress bar -->
 <div id="progress"></div>
 
-<!-- Background music generated via Web Audio API — no external file needed -->
+<!-- Background music — local Happy Birthday piano -->
+<audio id="bg-music" loop preload="auto">
+    <source src="./music.mp3" type="audio/mpeg">
+</audio>
 
 <!-- Music button -->
 <button id="music-btn" title="Toggle music" aria-label="Toggle background music">
@@ -668,7 +671,7 @@ section { position:relative; z-index:2; overflow:hidden; }
 
     <div class="s1-body">
         <span class="s1-line-dec" id="s1-dec"></span>
-        <p class="s1-eyebrow" id="s1-eyebrow">— For you, FAST Huda</p>
+        <p class="s1-eyebrow" id="s1-eyebrow">— For you, FASTHuda</p>
 
         <h1 class="s1-title" id="s1-title">
             <span class="t-word">Happy</span>&nbsp;<span class="t-word">Birthday.</span>
@@ -1437,135 +1440,34 @@ ScrollTrigger.create({
 
 
 /* ════════════════════════════════════════════════════════
-   AMBIENT MUSIC — generative warm pad via Web Audio API
-   Chord loop: C maj → A min → F maj → G maj (5.5 s each)
-   No external files. Works offline. 100 % reliable.
+   MUSIC TOGGLE — smooth volume fade
 ════════════════════════════════════════════════════════ */
 (function musicSetup() {
-    const btn   = document.getElementById('music-btn');
-    let playing = false;
-    let actx    = null;   // AudioContext
-    let master  = null;   // master GainNode
-    let rev     = null;   // ConvolverNode (synthetic reverb)
-    let timer   = null;   // chord scheduler setTimeout
-    let beat    = 0;      // chord index
-
-    /* ── Warm chord progression (C major key) ─────────── */
-    const PROG = [
-        { bass: 65.41,  notes: [130.81, 164.81, 196.00, 261.63] }, // C maj
-        { bass: 55.00,  notes: [110.00, 130.81, 164.81, 220.00] }, // A min
-        { bass: 43.65,  notes: [ 87.31, 110.00, 130.81, 174.61] }, // F maj
-        { bass: 49.00,  notes: [ 98.00, 123.47, 146.83, 196.00] }, // G maj
-    ];
-    const CHORD_DUR = 5.5; // seconds per chord
-
-    /* ── Synthetic reverb (random impulse response) ───── */
-    function buildReverb() {
-        const len = actx.sampleRate * 3.2;
-        const buf = actx.createBuffer(2, len, actx.sampleRate);
-        for (let ch = 0; ch < 2; ch++) {
-            const d = buf.getChannelData(ch);
-            for (let i = 0; i < len; i++)
-                d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8);
-        }
-        const c = actx.createConvolver();
-        c.buffer = buf;
-        return c;
-    }
-
-    /* ── Schedule one note (osc → filter → gain → dest) ─ */
-    function note(freq, type, time, dur, vol, detune, toRev) {
-        const osc = actx.createOscillator();
-        const flt = actx.createBiquadFilter();
-        const g   = actx.createGain();
-
-        osc.type          = type;
-        osc.frequency.value = freq;
-        osc.detune.value  = detune;
-
-        flt.type          = 'lowpass';
-        flt.frequency.value = (type === 'sine') ? 380 : 1100;
-        flt.Q.value       = 0.55;
-
-        const att = 1.4, rel = 1.8;
-        g.gain.setValueAtTime(0,   time);
-        g.gain.linearRampToValueAtTime(vol, time + att);
-        g.gain.setValueAtTime(vol, Math.max(time + att + 0.01, time + dur - rel));
-        g.gain.linearRampToValueAtTime(0,   time + dur);
-
-        osc.connect(flt);
-        flt.connect(g);
-        g.connect(master);
-        if (toRev && rev) g.connect(rev);
-
-        osc.start(time);
-        osc.stop(time + dur + 0.15);
-    }
-
-    /* ── Schedule next chord then re-queue ─────────────── */
-    function schedNext() {
-        if (!playing) return;
-        const now  = actx.currentTime;
-        const prog = PROG[beat % PROG.length];
-
-        /* Bass — deep sine */
-        note(prog.bass,       'sine',     now, CHORD_DUR, 0.10,  0, false);
-        note(prog.bass * 2,   'sine',     now, CHORD_DUR, 0.055, 0, false);
-
-        /* Pad — 3 slightly detuned triangle oscillators per chord note */
-        prog.notes.forEach(f => {
-            [-6, 0, 6].forEach(det =>
-                note(f, 'triangle', now, CHORD_DUR, 0.028, det, true)
-            );
-        });
-
-        beat++;
-        timer = setTimeout(schedNext, (CHORD_DUR - 0.5) * 1000);
-    }
-
-    /* ── Start generative engine ────────────────────────── */
-    function start() {
-        actx   = new (window.AudioContext || window.webkitAudioContext)();
-        master = actx.createGain();
-        master.gain.setValueAtTime(0, actx.currentTime);
-        master.gain.linearRampToValueAtTime(0.58, actx.currentTime + 2.8);
-        master.connect(actx.destination);
-
-        rev = buildReverb();
-        rev.connect(master);
-
-        schedNext();
-    }
-
-    /* ── Stop & clean up ─────────────────────────────────── */
-    function stop() {
-        clearTimeout(timer);
-        playing = false;
-        if (!master) return;
-        const now = actx.currentTime;
-        master.gain.cancelScheduledValues(now);
-        master.gain.setValueAtTime(master.gain.value, now);
-        master.gain.linearRampToValueAtTime(0, now + 1.1);
-        setTimeout(() => { try { actx.close(); } catch(e) {} actx = null; }, 1300);
-    }
+    const audio   = document.getElementById('bg-music');
+    const btn     = document.getElementById('music-btn');
+    let playing   = false;
+    audio.volume  = 0;
 
     btn.addEventListener('click', () => {
         if (!playing) {
-            playing = true;
-            start();
+            audio.play()
+                .then(() => gsap.to(audio, { volume:0.26, duration:1.8, ease:'power2.inOut' }))
+                .catch(() => { audio.volume = 0.26; });
             btn.classList.add('playing');
             btn.title = 'Music on — click to pause';
         } else {
-            stop();
+            gsap.to(audio, { volume:0, duration:0.8, ease:'power2.in',
+                onComplete:() => audio.pause() });
             btn.classList.remove('playing');
             btn.title = 'Toggle background music';
         }
+        playing = !playing;
     });
 
-    /* Resume on mobile after touch unlock */
+    /* Re-play after mobile unlock */
     document.body.addEventListener('touchstart', () => {
-        if (playing && actx && actx.state === 'suspended') actx.resume();
-    }, { once: true, passive: true });
+        if (playing && audio.paused) audio.play().catch(() => {});
+    }, { once:true, passive:true });
 })();
 
 
