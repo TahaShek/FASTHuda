@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Happy Birthday.</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,200;0,14..32,300;0,14..32,400;0,14..32,500;1,14..32,300&display=swap" rel="stylesheet">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <style>
+/* ══════════════════════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════════════════════ */
+        :root {
+    --gold:       #8c6239;
+    --gold-mid:   #b07a50;
+    --gold-hi:    #d4aa72;
+    --cream:      #ede4cf;
+    --cream-lo:   #e2d8c2;
+    --dark:       #0e0905;
+    --dark-2:     #1a0d04;
+    --char:       rgba(14,9,5,0.88);
+    --char-mid:   rgba(14,9,5,0.52);
+    --char-lo:    rgba(14,9,5,0.26);
+    --px:         clamp(24px, 8vw, 140px);
+    --gold-rgb:   140,98,57;
+}
+
+/* ── Reset ─────────────────────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+    background: var(--dark);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+    cursor: none; /* custom cursor replaces */
+}
+@media (hover:none) { body { cursor: auto; } }
+
+/* ── Film grain ─────────────────────────────────────── */
+body::before {
+    content:'';
+    position:fixed; inset:0; z-index:999; pointer-events:none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)' opacity='0.046'/%3E%3C/svg%3E");
+    background-size: 260px;
+    opacity: 0.60;
+            mix-blend-mode: overlay;
+        }
+
+/* ══════════════════════════════════════════════════════
+   SCROLL PROGRESS — right edge
+══════════════════════════════════════════════════════ */
+#progress {
+    position:fixed; top:0; right:0;
+    width:1.5px; height:0%;
+    background: linear-gradient(to bottom, var(--gold-hi), rgba(var(--gold-rgb),0.06));
+    z-index:400; pointer-events:none;
+}
+
+/* ══════════════════════════════════════════════════════
+   CUSTOM CURSOR — ring + inner dot + adaptive glow
+══════════════════════════════════════════════════════ */
+#cursor-ring {
+    position:fixed; left:0; top:0;
+    width:28px; height:28px;
+    margin:-14px 0 0 -14px;
+    border-radius:50%;
+    border:1px solid rgba(var(--gold-rgb),0.40);
+    pointer-events:none; z-index:1000;
+    will-change:transform;
+    transition: border-color 0.25s, box-shadow 0.25s;
+}
+#cursor-dot {
+    position:fixed; left:0; top:0;
+    width:4px; height:4px;
+    margin:-2px 0 0 -2px;
+    border-radius:50%;
+    background: rgba(var(--gold-rgb),0.75);
+    pointer-events:none; z-index:1001;
+    will-change:transform;
+}
+#cursor-ring.on-light {
+    border-color: rgba(14,9,5,0.35);
+    box-shadow: none;
+}
+#cursor-ring.hover {
+    border-color: rgba(var(--gold-rgb),0.80);
+    box-shadow: 0 0 14px 3px rgba(var(--gold-rgb),0.18);
+    transform: scale(1.55) !important; /* overridden by gsap but used as fallback */
+}
+@media (hover:none) { #cursor-ring, #cursor-dot { display:none; } }
+
+/* ══════════════════════════════════════════════════════
+   MUSIC BUTTON — with animated wave bars
+══════════════════════════════════════════════════════ */
+        #music-btn {
+    position:fixed; top:22px; right:22px;
+    width:42px; height:42px;
+    border-radius:50%;
+    border:1px solid rgba(var(--gold-rgb),0.18);
+    background: rgba(14,9,5,0.28);
+    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    cursor:pointer; z-index:450;
+    display:flex; align-items:center; justify-content:center; gap:2.5px;
+    opacity:0;
+    transition: border-color 0.3s, background 0.3s;
+}
+#music-btn:hover { border-color: rgba(var(--gold-rgb),0.45); background:rgba(14,9,5,0.40); }
+#music-btn.playing { border-color: rgba(var(--gold-rgb),0.55); }
+
+.wave-bar {
+    width:2.5px; border-radius:2px;
+    background: rgba(var(--gold-rgb),0.40);
+    transition: background 0.3s;
+    animation: none;
+    height:8px;
+}
+.wave-bar:nth-child(1) { animation-delay: 0s;    }
+.wave-bar:nth-child(2) { animation-delay: 0.15s; }
+.wave-bar:nth-child(3) { animation-delay: 0.30s; }
+.wave-bar:nth-child(4) { animation-delay: 0.10s; }
+#music-btn.playing .wave-bar {
+    animation: waveBeat 0.65s ease-in-out infinite alternate;
+    background: var(--gold-mid);
+}
+@keyframes waveBeat {
+    0%   { height: 3px;  }
+    100% { height: 14px; }
+}
+#music-btn.playing .wave-bar:nth-child(2) { animation-duration: 0.50s; }
+#music-btn.playing .wave-bar:nth-child(3) { animation-duration: 0.80s; }
+#music-btn.playing .wave-bar:nth-child(4) { animation-duration: 0.55s; }
+
+/* ══════════════════════════════════════════════════════
+   CANVASES
+══════════════════════════════════════════════════════ */
+#particle-canvas  { position:fixed; inset:0; z-index:0; pointer-events:none; }
+#confetti-canvas  { position:fixed; inset:0; z-index:600; pointer-events:none; }
+#trail-canvas     { position:fixed; inset:0; z-index:1; pointer-events:none; }
+
+/* ══════════════════════════════════════════════════════
+   FLOATING EMOJIS
+══════════════════════════════════════════════════════ */
+.fe {
+    position:fixed; font-size:1.05rem;
+    cursor:pointer; z-index:160; opacity:0;
+    user-select:none; background:none; border:none;
+    padding:12px; line-height:1;
+    -webkit-tap-highlight-color:transparent;
+    transition: opacity 0.3s;
+    filter: drop-shadow(0 2px 8px rgba(var(--gold-rgb),0));
+    transition: opacity 0.3s, filter 0.3s;
+}
+.fe:hover {
+    opacity:0.75 !important;
+    filter: drop-shadow(0 2px 12px rgba(var(--gold-rgb),0.35));
+}
+#fe-moon  { top:19vh;   left:5vw;   }
+#fe-spark { top:58vh;   right:6vw;  }
+#fe-cake  { bottom:16vh; left:4vw;  }
+@media(max-width:600px) { .fe { font-size:1.3rem; padding:14px; } }
+
+/* ══════════════════════════════════════════════════════
+           SECTION BASE
+══════════════════════════════════════════════════════ */
+section { position:relative; z-index:2; overflow:hidden; }
+
+        .orb {
+    position:absolute; border-radius:50%;
+    filter:blur(110px); pointer-events:none; will-change:transform;
+}
+        .sec-tag {
+    position:relative; z-index:2;
+    font-size:0.585rem; font-weight:500;
+    letter-spacing:0.26em; text-transform:uppercase;
+    margin-bottom:3.4rem; opacity:0;
+}
+
+/* ══════════════════════════════════════════════════════
+   §1 HERO — full-bleed photo + ken burns + parallax
+══════════════════════════════════════════════════════ */
+#s1 {
+    min-height:100vh;
+    display:flex; flex-direction:column; justify-content:flex-end;
+    padding: 0 var(--px) clamp(60px,10vh,110px);
+    background: var(--dark-2);
+}
+
+.hero-photo {
+    position:absolute; inset:0; z-index:0;
+    background: url('./Attached_image.png') 62% 38% / cover no-repeat;
+    will-change:transform;
+    animation: kenBurns 24s ease-in-out infinite alternate;
+}
+@keyframes kenBurns {
+    0%   { transform: scale(1.00) translate(0px,0px);    }
+    100% { transform: scale(1.06) translate(-10px,-4px); }
+}
+
+/* layered overlays */
+.hero-vignette-r {
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+    background: linear-gradient(to left, rgba(8,4,1,0.60) 0%, transparent 42%);
+}
+        .hero-overlay {
+    position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:
+        radial-gradient(ellipse 110% 75% at 68% 36%,
+            rgba(30,14,3,0.08) 0%, rgba(14,6,1,0.50) 100%),
+        linear-gradient(to bottom,
+            rgba(8,4,1,0.08)  0%,
+            rgba(8,4,1,0.32) 38%,
+            rgba(8,4,1,0.75) 68%,
+            rgba(8,4,1,0.95) 100%);
+}
+
+#s1 .orb-a {
+    width:780px; height:780px; top:-120px; right:-120px; z-index:3;
+    background:radial-gradient(circle, rgba(210,148,55,0.17) 0%, transparent 60%);
+}
+#s1 .orb-b {
+    width:460px; height:460px; bottom:-40px; left:-90px; z-index:3;
+    background:radial-gradient(circle, rgba(150,75,25,0.16) 0%, transparent 60%);
+}
+
+.s1-body { position:relative; z-index:4; }
+
+.s1-line-dec {
+    display:block; width:28px; height:1px;
+    background:rgba(var(--gold-rgb),0.55);
+    margin-bottom:1.4rem; opacity:0;
+}
+        .s1-eyebrow {
+    font-size:0.63rem; font-weight:500;
+    letter-spacing:0.26em; text-transform:uppercase;
+    color: var(--gold-hi); margin-bottom:1.8rem; opacity:0;
+        }
+        .s1-title {
+    font-size: clamp(3rem,10.5vw,8.5rem);
+    font-weight:200; letter-spacing:-0.042em; line-height:1.00;
+    color:rgba(242,232,210,0.96); margin-bottom:2.2rem;
+    perspective: 900px;
+}
+.t-word { display:inline-block; opacity:0; transform-origin:bottom left; }
+
+        .s1-sub {
+    font-size: clamp(0.88rem,2.1vw,1.22rem);
+    font-weight:300; font-style:italic;
+    color:rgba(218,202,172,0.58); line-height:1.75;
+    max-width:480px; opacity:0;
+}
+
+/* ── Scroll indicator: vertical line + moving dot ── */
+.scroll-indicator {
+    position:absolute; bottom:clamp(60px,10vh,110px); right:var(--px);
+    z-index:4; display:flex; flex-direction:column;
+    align-items:center; gap:0; opacity:0;
+}
+.scroll-indicator .si-text {
+    font-size:0.52rem; font-weight:400;
+    letter-spacing:0.28em; text-transform:uppercase;
+    color:rgba(218,202,172,0.28); writing-mode:vertical-rl;
+    margin-bottom:10px;
+}
+.si-track {
+    width:1px; height:48px;
+    background:rgba(218,202,172,0.14);
+    position:relative; overflow:hidden;
+}
+.si-dot {
+    position:absolute; top:-4px; left:-1.5px;
+    width:4px; height:4px; border-radius:50%;
+    background:rgba(var(--gold-rgb),0.55);
+    animation: slideDown 1.8s ease-in-out infinite;
+}
+@keyframes slideDown {
+    0%   { top:-4px; opacity:0; }
+    20%  { opacity:1; }
+    80%  { opacity:1; }
+    100% { top:52px; opacity:0; }
+}
+
+/* ══════════════════════════════════════════════════════
+   §2 STORY
+══════════════════════════════════════════════════════ */
+#s2 {
+    min-height:120vh;
+    display:flex; flex-direction:column; justify-content:center;
+    padding: clamp(90px,15vh,160px) var(--px);
+    background: linear-gradient(180deg, #ede4cf 0%, #e8dcca 100%);
+}
+#s2 .sec-tag { color:var(--char-lo); }
+#s2 .orb-a {
+    width:800px; height:800px; top:-80px; left:-220px;
+    background:radial-gradient(circle, rgba(100,140,230,0.22) 0%, transparent 58%);
+}
+#s2 .orb-b {
+    width:480px; height:480px; bottom:20px; right:-100px;
+    background:radial-gradient(circle, rgba(180,110,200,0.18) 0%, transparent 58%);
+}
+
+.story-body { position:relative; z-index:2; max-width: 900px; }
+
+        .story-line {
+    display:block;
+    font-size: clamp(1.4rem,3.6vw,3rem);
+    font-weight:300; line-height:1.54;
+    color:var(--char);
+    cursor:pointer; position:relative;
+    user-select:none;
+}
+.story-line + .story-line { margin-top:0.06em; }
+.story-line.indent {
+    padding-left:clamp(1.2rem,5vw,5rem);
+    color:var(--char-mid);
+}
+.story-line.small {
+    font-size: clamp(1rem,2.4vw,1.9rem);
+    color:var(--char-mid);
+    padding-left:clamp(1.2rem,5vw,5rem);
+}
+
+/* pull-quote block */
+.pull-quote {
+    position:relative; z-index:2;
+    margin-top: clamp(2.4rem,5vh,5rem);
+    padding-left:clamp(1rem,3vw,2rem);
+    border-left:2px solid rgba(var(--gold-rgb),0.28);
+    opacity:0; transform:translateY(18px);
+}
+.pull-quote p {
+    font-size: clamp(0.82rem,1.7vw,1.05rem);
+    font-weight:300; font-style:italic;
+    color:var(--char-mid); line-height:1.75;
+}
+.pull-quote cite {
+    display:block; margin-top:0.5em;
+    font-size:0.62rem; font-weight:400;
+    letter-spacing:0.20em; text-transform:uppercase;
+    color:rgba(var(--gold-rgb),0.55);
+    font-style:normal;
+}
+
+/* char spans (injected by JS) */
+.ch {
+    display:inline-block; opacity:0; transform:translateY(9px);
+    transition: color 0.14s;
+    will-change: transform, opacity;
+}
+.ch-sp { display:inline-block; width:0.27em; }
+
+/* ══════════════════════════════════════════════════════
+   §3 ABOUT HER
+══════════════════════════════════════════════════════ */
+#s3 {
+    min-height:115vh;
+    display:flex; flex-direction:column; justify-content:center;
+    padding: clamp(88px,13vh,150px) var(--px);
+    background: linear-gradient(170deg, #e8dcca 0%, #ddd0b6 100%);
+}
+#s3 .sec-tag { color:var(--char-lo); }
+#s3 .orb-a {
+    width:760px; height:760px; top:-5%; right:-200px;
+    background:radial-gradient(circle, rgba(70,160,185,0.22) 0%, transparent 58%);
+}
+#s3 .orb-b {
+    width:580px; height:580px; bottom:0; left:-130px;
+    background:radial-gradient(circle, rgba(195,120,50,0.24) 0%, transparent 58%);
+}
+
+.about-list { position:relative; z-index:2; }
+
+        .about-row {
+    display:flex; align-items:baseline;
+    gap: clamp(1rem,3vw,2.4rem);
+    padding:0.7em 0;
+    border-bottom:1px solid rgba(14,9,5,0.09);
+    opacity:0; transform:translateX(-28px);
+    cursor:default;
+    transition: background 0.2s;
+}
+.about-row:last-child { border-bottom:none; }
+.about-row.has-secret { align-items:flex-start; }
+.about-row:not(.row-joke):hover {
+    background: rgba(var(--gold-rgb),0.04);
+    border-radius:4px;
+}
+
+        .row-num {
+    font-size:0.55rem; font-weight:400;
+    letter-spacing:0.14em; color:var(--char-lo);
+    min-width:22px; flex-shrink:0; padding-top:0.18em;
+}
+.about-row.has-secret .row-num { padding-top:0.4em; }
+
+.row-content { flex:1; min-width:0; }
+
+        .row-text {
+    font-size:clamp(0.90rem,2.2vw,1.35rem);
+    font-weight:300; line-height:1.62;
+    color:var(--char-mid);
+}
+.row-text b { color:var(--char); font-weight:400; }
+.row-joke .row-text { color:rgba(14,9,5,0.33); font-style:italic; }
+
+/* Soft parenthetical aside inside a row */
+.row-aside {
+    display: inline;
+    font-size: clamp(0.72rem, 1.55vw, 0.88rem);
+    font-weight: 300;
+    font-style: italic;
+    color: rgba(var(--gold-rgb), 0.62);
+    margin-left: 0.3em;
+    white-space: normal;
+    line-height: 1.5;
+}
+@media(max-width:600px) {
+    .row-aside { display: block; margin-left: 0; margin-top: 0.20em; font-size: 0.78rem; }
+}
+
+/* secret expand button */
+.sec-btn {
+    background:none; border:1px solid rgba(14,9,5,0.14);
+    border-radius:50%; width:20px; height:20px;
+    font-size:0.58rem; cursor:pointer;
+    color:var(--char-lo);
+    display:inline-flex; align-items:center; justify-content:center;
+    flex-shrink:0; margin-left:0.55rem;
+    vertical-align:middle; position:relative; top:1px;
+    transition:border-color 0.3s, transform 0.3s;
+    -webkit-tap-highlight-color:transparent;
+}
+.sec-btn:hover { border-color:rgba(var(--gold-rgb),0.50); }
+.sec-btn.open  { transform:rotate(45deg); border-color:rgba(var(--gold-rgb),0.55); }
+
+.sec-reveal {
+    display:block;
+    font-size:clamp(0.68rem,1.45vw,0.84rem);
+    font-weight:300; font-style:italic;
+    color:rgba(var(--gold-rgb),0.72);
+    padding-top:0.38em;
+    overflow:hidden; max-height:0; opacity:0;
+}
+
+/* ── Secrets revealed counter badge ── */
+#sec-badge {
+    position:relative; z-index:2;
+    margin-top:2.4rem;
+    font-size:0.58rem; font-weight:400;
+    letter-spacing:0.20em; text-transform:uppercase;
+    color:rgba(var(--gold-rgb),0);
+    opacity:0; transition:color 0.5s;
+}
+#sec-badge.visible { color:rgba(var(--gold-rgb),0.45); opacity:1; }
+#sec-badge span { color:rgba(var(--gold-rgb),0.75); font-weight:500; }
+
+/* ══════════════════════════════════════════════════════
+   §4 CLOSING
+══════════════════════════════════════════════════════ */
+#s4 {
+    min-height:100vh;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:0 var(--px);
+    background:linear-gradient(180deg, #1e1309 0%, var(--dark) 100%);
+}
+#s4::before {
+    content:''; position:absolute; top:0;
+    left:var(--px); right:var(--px); height:1px;
+    background:rgba(242,218,178,0.08);
+}
+#s4 .sec-tag  { color:rgba(225,205,170,0.26); }
+#s4 .orb-a {
+    width:960px; height:960px;
+    top:50%; left:50%; transform:translate(-50%,-50%);
+    background:radial-gradient(circle, rgba(170,100,35,0.24) 0%, transparent 52%);
+    z-index:0;
+}
+
+.close-body { position:relative; z-index:2; max-width:900px; }
+
+.cl {
+    display:block;
+    font-size:clamp(1.25rem,3.4vw,2.80rem);
+    font-weight:200; line-height:1.46;
+    color:rgba(225,205,170,0.48);
+    opacity:0; transform:translateY(20px);
+}
+.cl.strong { color:rgba(240,225,198,0.88); font-weight:300; }
+.cl.land   { color:var(--gold-hi);        font-weight:300; margin-top:0.18em; }
+
+        .close-sig {
+    display:flex; align-items:center; gap:0.8rem;
+    margin-top:clamp(2.5rem,5.5vh,4.5rem);
+    opacity:0;
+}
+.close-sig-line {
+    flex:1; max-width:52px; height:1px;
+    background:rgba(var(--gold-rgb),0.28);
+}
+.close-sig-text {
+    font-size:0.58rem; font-weight:400;
+    letter-spacing:0.28em; text-transform:uppercase;
+    color:rgba(225,205,170,0.28);
+}
+
+/* ── Big confetti button ── */
+#wish-btn {
+    display:inline-flex; align-items:center; gap:0.6rem;
+    margin-top:clamp(1.8rem,4vh,3.5rem);
+    padding:0.65em 1.55em;
+    border:1px solid rgba(var(--gold-rgb),0.28);
+    border-radius:100px;
+    background:rgba(var(--gold-rgb),0.06);
+    color:rgba(var(--gold-rgb),0.75);
+    font-family:inherit; font-size:0.70rem; font-weight:400;
+    letter-spacing:0.18em; text-transform:uppercase;
+    cursor:pointer; opacity:0;
+    transition: background 0.3s, border-color 0.3s, color 0.3s;
+    -webkit-tap-highlight-color:transparent;
+}
+#wish-btn:hover {
+    background:rgba(var(--gold-rgb),0.14);
+    border-color:rgba(var(--gold-rgb),0.55);
+    color:var(--gold-hi);
+}
+#wish-btn .btn-icon { font-size:1rem; }
+
+/* ── Rising stars canvas (inside s4) ── */
+#star-canvas {
+    position:absolute; inset:0; z-index:1; pointer-events:none;
+}
+
+/* ══════════════════════════════════════════════════════
+   MARQUEE / ROLLING TEXT STRIP
+══════════════════════════════════════════════════════ */
+#marquee-strip {
+    overflow: hidden;
+    position: relative; z-index: 2;
+    padding: 1.15rem 0;
+    background: var(--dark);
+    border-top:    1px solid rgba(var(--gold-rgb), 0.12);
+    border-bottom: 1px solid rgba(var(--gold-rgb), 0.12);
+}
+.mq-track {
+    display: flex; align-items: center;
+    white-space: nowrap;
+    will-change: transform;
+}
+.mq-item {
+    flex-shrink: 0;
+    font-size: clamp(0.62rem, 1.5vw, 0.84rem);
+    font-weight: 400;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: rgba(var(--gold-rgb), 0.42);
+    padding: 0 clamp(1.4rem, 3.5vw, 2.8rem);
+    transition: color 0.25s;
+}
+.mq-sep {
+    flex-shrink: 0;
+    font-size: 0.48rem;
+    color: rgba(var(--gold-rgb), 0.22);
+    padding: 0 clamp(0.6rem, 1.5vw, 1.2rem);
+}
+#marquee-strip:hover .mq-item { color: rgba(var(--gold-rgb), 0.68); }
+
+/* ══════════════════════════════════════════════════════
+   HAPPY BIRTHDAY BUTTON (end of §4)
+══════════════════════════════════════════════════════ */
+#hbd-btn {
+    display: inline-flex; align-items: center; gap: 0.65rem;
+    margin-top: clamp(1.4rem, 3vh, 2.5rem);
+    padding: 0.88em 2.2em;
+    border: 1.5px solid rgba(var(--gold-rgb), 0.50);
+    border-radius: 100px;
+    background: rgba(var(--gold-rgb), 0.10);
+    color: var(--gold-hi);
+    font-family: inherit;
+    font-size: clamp(0.80rem, 2.2vw, 1.0rem);
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer; opacity: 0;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.30s, border-color 0.30s, color 0.30s, transform 0.20s, box-shadow 0.30s;
+}
+#hbd-btn:hover {
+    background: rgba(var(--gold-rgb), 0.22);
+    border-color: rgba(var(--gold-rgb), 0.85);
+    color: #f0dfc8;
+    box-shadow: 0 0 28px 4px rgba(var(--gold-rgb), 0.14);
+    transform: scale(1.04);
+}
+#hbd-btn .btn-icon { font-size: 1.15rem; }
+@media(max-width:600px) {
+    #hbd-btn { font-size: 0.78rem; padding: 0.80em 1.6em; }
+}
+
+/* ══════════════════════════════════════════════════════
+   SECTION DIVIDER RULE (light sections only)
+══════════════════════════════════════════════════════ */
+#s2::before, #s3::before {
+    content:''; position:absolute; top:0;
+    left:var(--px); right:var(--px); height:1px;
+    background:rgba(14,9,5,0.07);
+}
+
+/* ══════════════════════════════════════════════════════
+           MOBILE TWEAKS
+══════════════════════════════════════════════════════ */
+@media(max-width:600px) {
+    .story-line.indent, .story-line.small { padding-left:1.1rem; }
+    .about-row { gap:0.85rem; }
+    #s1 { justify-content:center; padding-top:clamp(70px,12vh,108px); }
+    .cl { font-size:clamp(1.08rem,5.8vw,1.55rem); }
+    .scroll-indicator { display:none; }
+    .s1-title { font-size:clamp(2.8rem,13vw,4.8rem); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div id="progress"></div>
+
+<!-- Background music generated via Web Audio API — no external file needed -->
+
+<!-- Music button -->
+<button id="music-btn" title="Toggle music" aria-label="Toggle background music">
+    <span class="wave-bar"></span>
+    <span class="wave-bar"></span>
+    <span class="wave-bar"></span>
+    <span class="wave-bar"></span>
+</button>
+
+<!-- Canvases -->
+<canvas id="particle-canvas"></canvas>
+<canvas id="trail-canvas"></canvas>
+<canvas id="confetti-canvas"></canvas>
+
+<!-- Custom cursor -->
+<div id="cursor-ring"></div>
+<div id="cursor-dot"></div>
+
+<!-- Floating emojis -->
+<button class="fe" id="fe-moon"  aria-label="Moon">🌙</button>
+<button class="fe" id="fe-spark" aria-label="Sparkle">✨</button>
+<button class="fe" id="fe-cake"  aria-label="Cake">🍰</button>
+
+
+<!-- ══════════════════════════════════════════════════
+     §1 HERO
+══════════════════════════════════════════════════ -->
+<section id="s1">
+    <div class="hero-photo" id="hero-photo"></div>
+    <div class="hero-vignette-r"></div>
+    <div class="hero-overlay"></div>
+
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+
+    <div class="s1-body">
+        <span class="s1-line-dec" id="s1-dec"></span>
+        <p class="s1-eyebrow" id="s1-eyebrow">— For you, FAST Huda</p>
+
+        <h1 class="s1-title" id="s1-title">
+            <span class="t-word">Happy</span>&nbsp;<span class="t-word">Birthday.</span>
+        </h1>
+
+        <p class="s1-sub" id="s1-sub">
+            To Huda — who made a stressful time easier.
+        </p>
+    </div>
+
+    <div class="scroll-indicator" id="scroll-ind">
+        <span class="si-text">Scroll</span>
+        <div class="si-track"><span class="si-dot"></span></div>
+    </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════
+     §2 STORY
+══════════════════════════════════════════════════ -->
+<section id="s2">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+
+    <p class="sec-tag" id="s2-tag">What I remember</p>
+
+    <div class="story-body" id="story-body">
+        <p class="story-line">One week.</p>
+        <p class="story-line">That's genuinely all we've had —</p>
+        <p class="story-line indent">seven days, maybe eight,</p>
+        <p class="story-line indent">already feels like a lot more.</p>
+        <p class="story-line" style="margin-top:0.5em">And yet you showed up — easy, calm, real.</p>
+        <p class="story-line small">No performance. No pretense.</p>
+        <p class="story-line small">Just present. That's rare.</p>
+    </div>
+
+    <div class="pull-quote" id="pull-quote">
+        <p>A week isn't long. But sometimes a person makes an impression<br>
+        that doesn't need more time to be real.</p>
+        <cite>Something I noticed quickly</cite>
+    </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════
+     §3 ABOUT HER
+══════════════════════════════════════════════════ -->
+<section id="s3">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+
+    <p class="sec-tag" id="s3-tag">What I noticed</p>
+
+    <div class="about-list" id="about-list">
+
+        <div class="about-row has-secret">
+            <span class="row-num">01</span>
+            <div class="row-content">
+                <p class="row-text"><b>Strong</b> and independent
+                    <span class="row-aside">(you can be weak, dependent too 🌸)</span>
+                    <button class="sec-btn" aria-label="Reveal more">💪</button></p>
+                <span class="sec-reveal">The kind of strength that doesn't need an audience.</span>
+        </div>
+        </div>
+
+        <div class="about-row">
+            <span class="row-num">02</span>
+            <p class="row-text"><b>Ambitious</b> and quietly focused</p>
+        </div>
+
+        <div class="about-row">
+            <span class="row-num">03</span>
+            <p class="row-text">Goes <b>out of her way</b> for the people she cares about</p>
+        </div>
+
+        <div class="about-row has-secret">
+            <span class="row-num">04</span>
+            <div class="row-content">
+                <p class="row-text"><b>Calm</b> and peaceful — genuinely
+                    <button class="sec-btn" aria-label="Reveal more">🌙</button></p>
+                <span class="sec-reveal">Rare. Most people mistake noise for confidence.</span>
+            </div>
+        </div>
+
+        <div class="about-row">
+            <span class="row-num">05</span>
+            <p class="row-text">Doesn't care <b>what people think</b> — and is right not to</p>
+        </div>
+
+        <div class="about-row">
+            <span class="row-num">06</span>
+            <p class="row-text">Loves <b>good food</b> — no compromises</p>
+        </div>
+
+        <div class="about-row has-secret">
+            <span class="row-num">07</span>
+            <div class="row-content">
+                <p class="row-text">Her <b>parents trust her judgment</b> — that says everything
+                    <button class="sec-btn" aria-label="Reveal more">✦</button></p>
+                <span class="sec-reveal">The people who know you best think the world of you. That's not nothing.</span>
+        </div>
+        </div>
+
+        <div class="about-row row-joke has-secret">
+            <span class="row-num">—</span>
+            <div class="row-content">
+                <p class="row-text">Strong… but secretly, sometimes, just wants someone to take care of her too.
+                    <button class="sec-btn" aria-label="Reveal more">🌸</button></p>
+                <span class="sec-reveal">And that's perfectly okay. Everyone does.</span>
+            </div>
+        </div>
+
+    </div>
+
+    <p id="sec-badge">Secrets revealed: <span id="sec-count">0</span> / 4</p>
+</section>
+
+
+<!-- ══════════════════════════════════════════════════
+     ROLLING MARQUEE STRIP
+══════════════════════════════════════════════════ -->
+<div id="marquee-strip" aria-hidden="true">
+    <div class="mq-track" id="mq-track"></div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     §4 CLOSING
+══════════════════════════════════════════════════ -->
+<section id="s4">
+    <canvas id="star-canvas"></canvas>
+    <div class="orb orb-a"></div>
+
+    <div class="close-body">
+        <span class="cl">Some people don't realise</span>
+        <span class="cl strong">how much their presence helps.</span>
+        <span class="cl" style="margin-top:0.6em">You probably don't either.</span>
+        <span class="cl land" id="close-land">But it did.</span>
+        <span class="cl" style="margin-top:0.5em; font-style:italic; font-size:clamp(0.95rem,2.4vw,1.8rem);">Thank you for bearing with me.</span>
+
+        <button id="wish-btn">
+            <span class="btn-icon">🎂</span>
+            <span>Send a wish</span>
+        </button>
+
+        <button id="hbd-btn">
+            <span class="btn-icon">🎉</span>
+            <span>Happy Birthday — Click Me</span>
+        </button>
+
+        <div class="close-sig">
+            <span class="close-sig-line"></span>
+            <span class="close-sig-text">Happy Birthday, Huda &nbsp;✦</span>
+            <span class="close-sig-line"></span>
+        </div>
+    </div>
+</section>
+
+
+<script>
+/* ════════════════════════════════════════════════════════
+   BOOTSTRAP
+════════════════════════════════════════════════════════ */
+gsap.registerPlugin(ScrollTrigger);
+
+
+/* ════════════════════════════════════════════════════════
+   SCROLL PROGRESS
+════════════════════════════════════════════════════════ */
+const progressBar = document.getElementById('progress');
+window.addEventListener('scroll', () => {
+    const p = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+    progressBar.style.height = (Math.min(p, 1) * 100).toFixed(2) + '%';
+}, { passive: true });
+
+
+/* ════════════════════════════════════════════════════════
+   GLOBAL MOUSE
+════════════════════════════════════════════════════════ */
+let mX = -9999, mY = -9999;
+window.addEventListener('mousemove', e => { mX = e.clientX; mY = e.clientY; }, { passive: true });
+
+
+/* ════════════════════════════════════════════════════════
+   WEB AUDIO — warm bell chime
+════════════════════════════════════════════════════════ */
+let _ctx = null;
+function getACtx() {
+    if (!_ctx || _ctx.state === 'closed')
+        _ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_ctx.state === 'suspended') _ctx.resume();
+    return _ctx;
+}
+function playChime(freq = 660, dur = 0.65) {
+    try {
+        const ctx = getACtx();
+        /* fundamental + 2nd harmonic for warmth */
+        [[freq, 0.11], [freq * 2, 0.045], [freq * 0.5, 0.03]].forEach(([f, v]) => {
+            const osc = ctx.createOscillator();
+            const g   = ctx.createGain();
+            osc.connect(g); g.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, ctx.currentTime);
+            g.gain.setValueAtTime(0, ctx.currentTime);
+            g.gain.linearRampToValueAtTime(v, ctx.currentTime + 0.010);
+            g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + dur + 0.05);
+        });
+    } catch(e) { /* silent */ }
+}
+
+
+/* ════════════════════════════════════════════════════════
+   CONFETTI — mixed shapes (stars, petals, teardrops)
+════════════════════════════════════════════════════════ */
+(function initConfetti() {
+    const cv  = document.getElementById('confetti-canvas');
+    const ctx = cv.getContext('2d');
+    const resize = () => { cv.width = innerWidth; cv.height = innerHeight; };
+    resize(); addEventListener('resize', resize, { passive:true });
+
+    const PAL = ['#8c6239','#b07a50','#c8956a','#d4aa72','#7a4e2e','#e0c4a0','#f5e6cc'];
+    const pieces = []; let running = false;
+
+    /* shape 0=star 1=petal 2=circle */
+    function drawShape(ctx, shape, sz, rot) {
+        ctx.rotate(rot);
+        if (shape === 0) {
+            /* 4-point star */
+        ctx.beginPath();
+        for (let i = 0; i < 4; i++) {
+                const a  = (i/4)*Math.PI*2;
+                const a2 = a + Math.PI/4;
+                i===0 ? ctx.moveTo(Math.cos(a)*sz, Math.sin(a)*sz)
+                      : ctx.lineTo(Math.cos(a)*sz, Math.sin(a)*sz);
+                ctx.lineTo(Math.cos(a2)*sz*0.38, Math.sin(a2)*sz*0.38);
+        }
+        ctx.closePath();
+        } else if (shape === 1) {
+            /* petal / teardrop */
+            ctx.beginPath();
+            ctx.ellipse(0, -sz*0.5, sz*0.38, sz*0.65, 0, 0, Math.PI*2);
+        } else {
+            /* circle */
+            ctx.beginPath();
+            ctx.arc(0, 0, sz*0.5, 0, Math.PI*2);
+        }
+    }
+
+    class CP {
+        constructor(ox, oy) {
+            const spd = 2.2 + Math.random() * 6;
+            const ang = Math.random() * Math.PI * 2;
+            this.x  = ox; this.y = oy;
+            this.vx = Math.cos(ang) * spd;
+            this.vy = Math.sin(ang) * spd - 3.2;
+            this.rot = Math.random() * Math.PI * 2;
+            this.rv  = (Math.random() - 0.5) * 0.22;
+            this.sz  = 1.8 + Math.random() * 3.4;
+            this.shape = Math.floor(Math.random() * 3);
+            this.clr   = PAL[Math.floor(Math.random() * PAL.length)];
+            this.life  = 0;
+            this.max   = 60 + Math.random() * 65;
+            this.grav  = 0.065 + Math.random() * 0.05;
+        }
+        tick() {
+            this.vx *= 0.97; this.vy += this.grav;
+            this.x += this.vx; this.y += this.vy;
+            this.rot += this.rv;
+            return ++this.life < this.max;
+        }
+        draw() {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, 1 - this.life / this.max);
+            ctx.fillStyle   = this.clr;
+            ctx.translate(this.x, this.y);
+            drawShape(ctx, this.shape, this.sz, this.rot);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    function loop() {
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        for (let i = pieces.length - 1; i >= 0; i--) {
+            if (!pieces[i].tick()) pieces.splice(i, 1);
+            else pieces[i].draw();
+        }
+        if (pieces.length) requestAnimationFrame(loop); else running = false;
+    }
+
+    window.burstConfetti = (x, y, n = 40) => {
+        for (let i = 0; i < n; i++) pieces.push(new CP(x, y));
+        if (!running) { running = true; requestAnimationFrame(loop); }
+    };
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   RISING STARS — inside §4 canvas
+════════════════════════════════════════════════════════ */
+(function initStars() {
+    const cv  = document.getElementById('star-canvas');
+    const ctx = cv.getContext('2d');
+    let W, H, running = false;
+    const resize = () => {
+        const r = cv.parentElement.getBoundingClientRect();
+        W = cv.width  = r.width  || innerWidth;
+        H = cv.height = r.height || innerHeight;
+    };
+    resize();
+    addEventListener('resize', resize, { passive:true });
+
+    const stars = [];
+
+    class Star {
+        constructor() { this.reset(true); }
+        reset(scattered) {
+            this.x     = Math.random() * W;
+            this.y     = scattered ? Math.random() * H : H + 8;
+            this.r     = 0.5 + Math.random() * 1.2;
+            this.vy    = -(0.3 + Math.random() * 0.7);
+            this.vx    = (Math.random() - 0.5) * 0.15;
+            this.life  = 0;
+            this.max   = 180 + Math.random() * 280;
+            this.alpha = 0;
+        }
+        tick() {
+            this.x += this.vx; this.y += this.vy; this.life++;
+            const h = this.max / 2;
+            const t = this.life < h ? this.life/h : (this.max-this.life)/h;
+            this.alpha = Math.max(0, t) * 0.35;
+            if (this.life >= this.max || this.y < -8) this.reset(false);
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(212,170,114,${this.alpha.toFixed(3)})`;
+            ctx.fill();
+        }
+    }
+
+    window.startRisingStars = () => {
+        if (running) return;
+        for (let i = 0; i < 55; i++) stars.push(new Star());
+        running = true;
+        (function loop() {
+            ctx.clearRect(0, 0, W, H);
+            stars.forEach(s => { s.tick(); s.draw(); });
+            if (running) requestAnimationFrame(loop);
+        })();
+    };
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   PARTICLES — dual-size, mouse-reactive
+════════════════════════════════════════════════════════ */
+(function initParticles() {
+    const cv  = document.getElementById('particle-canvas');
+    const ctx = cv.getContext('2d');
+    let W, H;
+    const resize = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; };
+    resize(); addEventListener('resize', resize, { passive:true });
+
+    class Dot {
+        constructor(scatter) {
+            const big    = Math.random() < 0.18;
+            this.big     = big;
+            this.r       = big ? 0.9 + Math.random() * 1.4 : 0.35 + Math.random() * 0.85;
+            this.x       = Math.random() * (W || innerWidth);
+            this.y       = scatter ? Math.random() * (H || innerHeight) : H + 12;
+            this.vy      = -(0.12 + Math.random() * 0.38);
+            this.vx      = (Math.random() - 0.5) * 0.10;
+            this.life    = 0;
+            this.maxLife = 220 + Math.random() * 360;
+            this.alpha   = 0;
+        }
+        tick() {
+            const dx = this.x - mX, dy = this.y - mY;
+            const d  = Math.sqrt(dx*dx + dy*dy);
+            if (d < 96 && d > 0) {
+                const f = ((96-d)/96) * 0.52;
+                this.vx += (dx/d)*f; this.vy += (dy/d)*f;
+            }
+            this.vx = Math.max(-1.5, Math.min(1.5, this.vx));
+            this.vy = Math.max(-2.4, Math.min(-0.04, this.vy));
+            this.x += this.vx; this.y += this.vy; this.life++;
+            const h = this.maxLife/2;
+            const t = this.life < h ? this.life/h : (this.maxLife-this.life)/h;
+            this.alpha = Math.max(0,t) * (this.big ? 0.22 : 0.28);
+            if (this.life >= this.maxLife || this.y < -12) {
+                this.x = Math.random()*W; this.y = H+12;
+                this.life = 0; this.alpha = 0;
+                this.vy = -(0.12+Math.random()*0.38);
+                this.vx = (Math.random()-0.5)*0.10;
+            }
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+            ctx.fillStyle = `rgba(var(--gold-rgb),${this.alpha.toFixed(3)})`;
+            ctx.fillStyle = `rgba(140,98,57,${this.alpha.toFixed(3)})`;
+            ctx.fill();
+        }
+    }
+
+    const dots = Array.from({ length:100 }, () => new Dot(true));
+    (function loop() {
+        ctx.clearRect(0,0,W,H);
+        dots.forEach(d => { d.tick(); d.draw(); });
+        requestAnimationFrame(loop);
+    })();
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   CURSOR TRAIL — faint gold smear that follows quickly
+════════════════════════════════════════════════════════ */
+(function initTrail() {
+    if ('ontouchstart' in window) return;
+    const cv  = document.getElementById('trail-canvas');
+    const ctx = cv.getContext('2d');
+    let W, H;
+    const resize = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; };
+    resize(); addEventListener('resize', resize, { passive:true });
+
+    const pts = [];
+    const MAX = 22;
+    addEventListener('mousemove', e => {
+        pts.push({ x:e.clientX, y:e.clientY, a:0.22 });
+        if (pts.length > MAX) pts.shift();
+    }, { passive:true });
+
+    (function loop() {
+        ctx.clearRect(0,0,W,H);
+        for (let i = 1; i < pts.length; i++) {
+            const p = pts[i], q = pts[i-1];
+            const a = (i/MAX) * 0.13;
+            ctx.beginPath();
+            ctx.moveTo(q.x, q.y);
+            ctx.lineTo(p.x, p.y);
+            ctx.strokeStyle = `rgba(140,98,57,${a.toFixed(3)})`;
+            ctx.lineWidth   = (i/MAX) * 1.5;
+            ctx.lineCap     = 'round';
+            ctx.stroke();
+        }
+        requestAnimationFrame(loop);
+    })();
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   CURSOR RING + DOT — adaptive to light/dark sections
+════════════════════════════════════════════════════════ */
+(function initCursor() {
+    if ('ontouchstart' in window || matchMedia('(hover:none)').matches) return;
+
+    const ring = document.getElementById('cursor-ring');
+    const dot  = document.getElementById('cursor-dot');
+
+    gsap.set([ring, dot], { x:-9999, y:-9999 });
+
+    const moveRingX = gsap.quickTo(ring, 'x', { duration:0.20, ease:'power2.out' });
+    const moveRingY = gsap.quickTo(ring, 'y', { duration:0.20, ease:'power2.out' });
+    const moveDotX  = gsap.quickTo(dot,  'x', { duration:0.07, ease:'power1.out' });
+    const moveDotY  = gsap.quickTo(dot,  'y', { duration:0.07, ease:'power1.out' });
+
+    addEventListener('mousemove', e => {
+        moveRingX(e.clientX); moveRingY(e.clientY);
+        moveDotX(e.clientX);  moveDotY(e.clientY);
+
+        /* Detect which section we're over for light/dark adaptation */
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        const inLight = el && (el.closest('#s2') || el.closest('#s3'));
+        ring.classList.toggle('on-light', !!inLight);
+        dot.style.background = inLight ? 'rgba(14,9,5,0.50)' : 'rgba(140,98,57,0.75)';
+    });
+
+    /* Interactive elements grow the ring */
+    document.querySelectorAll('button, a, .story-line, .about-row, #hbd-btn').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+            gsap.to(ring, { scale:1.6, duration:0.22, ease:'power2.out' });
+        });
+        el.addEventListener('mouseleave', () => {
+            gsap.to(ring, { scale:1.0, duration:0.30, ease:'elastic.out(1,0.5)' });
+        });
+    });
+
+    /* Squeeze on click */
+    addEventListener('mousedown', () =>
+        gsap.to(ring, { scale:0.55, borderColor:'rgba(140,98,57,0.80)', duration:0.10, ease:'power2.out' })
+    );
+    addEventListener('mouseup', () =>
+        gsap.to(ring, { scale:1.0,  borderColor:'rgba(140,98,57,0.40)', duration:0.55, ease:'elastic.out(1,0.45)' })
+    );
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   GSAP ANIMATIONS — orb parallax + hero entrance
+════════════════════════════════════════════════════════ */
+gsap.context(() => {
+
+    /* Orb parallax */
+document.querySelectorAll('section').forEach(sec => {
+        sec.querySelectorAll('.orb').forEach((orb, i) => {
+        gsap.to(orb, {
+                y: i % 2 === 0 ? -70 : 70,
+                ease:'none',
+                scrollTrigger:{ trigger:sec, start:'top bottom', end:'bottom top', scrub:2.2 }
+        });
+    });
+});
+
+    /* Hero photo parallax — moves slower than scroll */
+    gsap.to('#hero-photo', {
+        yPercent: 28,
+        ease:'none',
+        scrollTrigger:{ trigger:'#s1', start:'top top', end:'bottom top', scrub:1.0 }
+    });
+
+    /* ── Hero entrance timeline ── */
+    const htl = gsap.timeline({ delay:0.22 });
+    htl
+        .fromTo('#s1-dec',
+            { opacity:0, scaleX:0 },
+            { opacity:1, scaleX:1, duration:0.70, ease:'power3.out', transformOrigin:'left center' })
+      .fromTo('#s1-eyebrow',
+            { opacity:0, y:12 },
+            { opacity:1, y:0,  duration:0.75, ease:'power3.out' }, '-=0.30')
+        .fromTo('.t-word',
+            { opacity:0, y:62, rotateX:-32 },
+            { opacity:1, y:0,  rotateX:0, duration:1.35, stagger:0.18,
+              ease:'power4.out', transformPerspective:900 }, '-=0.42')
+      .fromTo('#s1-sub',
+            { opacity:0, y:12 },
+            { opacity:1, y:0,  duration:1.0, ease:'power2.out' }, '-=0.72')
+        .fromTo('#scroll-ind',
+            { opacity:0 },
+            { opacity:1, duration:0.9, ease:'power2.out' }, '-=0.38')
+      .fromTo('#music-btn',
+            { opacity:0 },
+            { opacity:1, duration:0.7, ease:'power2.out' }, '-=0.30')
+        .fromTo('.fe',
+            { opacity:0, scale:0.35 },
+            { opacity:0.13, scale:1, duration:1.1, stagger:0.28,
+              ease:'back.out(1.7)' }, '-=0.45');
+
+}, document.body);
+
+
+/* ════════════════════════════════════════════════════════
+   UTILITY — split text into .ch spans
+════════════════════════════════════════════════════════ */
+function splitChars(el) {
+    const text = el.textContent;
+    el.textContent = '';
+    const frag = document.createDocumentFragment();
+    [...text].forEach(c => {
+        const s = document.createElement('span');
+        if (c === ' ') {
+            s.className = 'ch-sp'; s.textContent = '\u00A0';
+        } else {
+            s.className = 'ch'; s.textContent = c;
+        }
+        frag.appendChild(s);
+    });
+    el.appendChild(frag);
+}
+
+
+/* ════════════════════════════════════════════════════════
+   §2 STORY — character reveal + click ripple/chime
+════════════════════════════════════════════════════════ */
+(function storySection() {
+    const lines = document.querySelectorAll('#s2 .story-line');
+    lines.forEach(l => splitChars(l));
+
+ScrollTrigger.create({
+        trigger:'#s2', start:'top 70%', once:true,
+    onEnter() {
+        const tl = gsap.timeline();
+                tl.fromTo('#s2-tag',
+                { opacity:0, y:8 },
+                { opacity:1, y:0, duration:0.60, ease:'power3.out' });
+
+                lines.forEach((line, idx) => {
+                const chars = line.querySelectorAll('.ch');
+                    tl.fromTo(chars,
+                    { opacity:0, y:10, filter:'blur(4px)' },
+                    { opacity:1, y:0, filter:'blur(0px)',
+                      duration:0.36, stagger:0.024, ease:'power2.out' },
+                    idx === 0 ? '-=0.08' : `-=${chars.length * 0.024 * 0.50}`
+                    );
+                });
+
+            tl.fromTo('#pull-quote',
+                { opacity:0, y:18 },
+                { opacity:1, y:0, duration:0.90, ease:'power3.out' }, '-=0.40');
+        }
+    });
+
+    /* Click: shimmer + ripple + chime */
+    const NOTES = [440, 493, 523, 587, 659, 698, 740];
+    lines.forEach((line, idx) => {
+        line.addEventListener('click', function(e) {
+            playChime(NOTES[idx % NOTES.length], 0.55);
+
+            const chars = this.querySelectorAll('.ch');
+            if (chars.length) {
+                gsap.to(chars, {
+                    color:'rgba(140,98,57,0.92)', duration:0.16,
+                    stagger:{ each:0.015, from:'start' },
+                    yoyo:true, repeat:1, ease:'sine.inOut'
+                });
+            }
+
+            /* Ripple */
+            const rip = document.createElement('div');
+            rip.style.cssText = `
+                position:fixed; left:${e.clientX-8}px; top:${e.clientY-8}px;
+                width:16px; height:16px; border-radius:50%;
+                background:radial-gradient(circle, rgba(140,98,57,0.18) 0%, transparent 68%);
+                pointer-events:none; z-index:510;
+            `;
+            document.body.appendChild(rip);
+            gsap.fromTo(rip, { scale:0, opacity:1 },
+                { scale:22, opacity:0, duration:0.68, ease:'power2.out',
+                  onComplete:() => rip.remove() });
+        });
+    });
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   §3 ABOUT HER — row slide-in + secret reveals
+════════════════════════════════════════════════════════ */
+(function aboutSection() {
+
+ScrollTrigger.create({
+        trigger:'#s3', start:'top 65%', once:true,
+    onEnter() {
+        const tl = gsap.timeline();
+            tl.fromTo('#s3-tag',
+                { opacity:0, y:8 },
+                { opacity:1, y:0, duration:0.60, ease:'power3.out' })
+              .fromTo('#about-list .about-row',
+                { opacity:0, x:-28 },
+                { opacity:1, x:0, duration:0.68, stagger:0.08, ease:'power3.out' }, '-=0.12');
+        }
+    });
+
+    let revealed = 0;
+    const total  = document.querySelectorAll('.sec-btn').length;
+    const badge  = document.getElementById('sec-badge');
+    const countEl= document.getElementById('sec-count');
+
+    document.querySelectorAll('.sec-btn').forEach(btn => {
+    let open = false;
+
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+            const text = this.closest('.row-content').querySelector('.sec-reveal');
+        if (!text) return;
+
+        if (!open) {
+            open = true;
+                this.classList.add('open');
+                playChime(528, 0.80);
+                gsap.fromTo(this, { scale:1 },
+                    { scale:1.55, duration:0.16, yoyo:true, repeat:1, ease:'power2.out' });
+                gsap.to(text, { maxHeight:90, opacity:1, duration:0.46, ease:'power3.out' });
+                revealed++;
+                countEl.textContent = revealed;
+                badge.classList.add('visible');
+                if (revealed === total) {
+                    /* All secrets found — tiny confetti celebration */
+                    const r = badge.getBoundingClientRect();
+                    burstConfetti(r.left + r.width/2, r.top, 18);
+                    playChime(784, 0.6);
+                }
+        } else {
+            open = false;
+                this.classList.remove('open');
+                gsap.to(text, { maxHeight:0, opacity:0, duration:0.30, ease:'power2.in' });
+                revealed = Math.max(0, revealed - 1);
+                countEl.textContent = revealed;
+                if (!revealed) badge.classList.remove('visible');
+        }
+    });
+});
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   §4 CLOSING — stagger reveal + confetti land + stars
+════════════════════════════════════════════════════════ */
+(function closingSection() {
+ScrollTrigger.create({
+        trigger:'#s4', start:'top 65%', once:true,
+    onEnter() {
+            const tl    = gsap.timeline();
+            const lines = document.querySelectorAll('.cl');
+
+        lines.forEach((line, i) => {
+                const isLast = i === lines.length - 1;
+            tl.fromTo(line,
+                    { opacity:0, y:22 },
+                    { opacity:1, y:0, duration:1.05, ease:'power3.out',
+                      delay: isLast ? 0.45 : 0 },
+                    i === 0 ? '>' : '-=0.52'
+            );
+        });
+
+            tl.add(() => {
+                const land = document.getElementById('close-land');
+                if (land) {
+                    const r = land.getBoundingClientRect();
+                    burstConfetti(r.left + r.width*0.3, r.top + r.height/2, 28);
+                    playChime(660, 1.1);
+                    startRisingStars();
+                }
+            }, '+=0.06');
+
+            tl.fromTo('#wish-btn',
+                { opacity:0, y:12 },
+                { opacity:1, y:0, duration:0.80, ease:'power3.out' }, '+=0.20')
+
+              .fromTo('#hbd-btn',
+                { opacity:0, y:14, scale:0.88 },
+                { opacity:1, y:0,  scale:1,    duration:0.90, ease:'back.out(1.8)' }, '-=0.30')
+
+              .fromTo('.close-sig',
+                { opacity:0 },
+                { opacity:1, duration:1.4, ease:'power2.out' }, '+=0.30');
+        }
+    });
+
+    document.getElementById('wish-btn').addEventListener('click', function() {
+        playChime(784, 0.80);
+        const r = this.getBoundingClientRect();
+        const cx= r.left + r.width/2, cy = r.top + r.height/2;
+        burstConfetti(cx, cy, 65);
+        /* Extra ring burst */
+        [0, 140, 280].forEach(delay => {
+            setTimeout(() => {
+                const ring = document.createElement('div');
+                ring.style.cssText = `
+                    position:fixed; left:${cx}px; top:${cy}px;
+                    width:10px; height:10px; margin:-5px 0 0 -5px;
+                    border-radius:50%;
+                    border:1.5px solid rgba(212,170,114,0.65);
+                    pointer-events:none; z-index:599;
+                `;
+                document.body.appendChild(ring);
+                gsap.fromTo(ring, { scale:0, opacity:0.9 },
+                    { scale:14, opacity:0, duration:1.0, ease:'power2.out',
+                      onComplete:() => ring.remove() });
+            }, delay);
+        });
+        gsap.to(this, { scale:0.92, duration:0.10, yoyo:true, repeat:1, ease:'power2.out' });
+    });
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   AMBIENT MUSIC — generative warm pad via Web Audio API
+   Chord loop: C maj → A min → F maj → G maj (5.5 s each)
+   No external files. Works offline. 100 % reliable.
+════════════════════════════════════════════════════════ */
+(function musicSetup() {
+    const btn   = document.getElementById('music-btn');
+    let playing = false;
+    let actx    = null;   // AudioContext
+    let master  = null;   // master GainNode
+    let rev     = null;   // ConvolverNode (synthetic reverb)
+    let timer   = null;   // chord scheduler setTimeout
+    let beat    = 0;      // chord index
+
+    /* ── Warm chord progression (C major key) ─────────── */
+    const PROG = [
+        { bass: 65.41,  notes: [130.81, 164.81, 196.00, 261.63] }, // C maj
+        { bass: 55.00,  notes: [110.00, 130.81, 164.81, 220.00] }, // A min
+        { bass: 43.65,  notes: [ 87.31, 110.00, 130.81, 174.61] }, // F maj
+        { bass: 49.00,  notes: [ 98.00, 123.47, 146.83, 196.00] }, // G maj
+    ];
+    const CHORD_DUR = 5.5; // seconds per chord
+
+    /* ── Synthetic reverb (random impulse response) ───── */
+    function buildReverb() {
+        const len = actx.sampleRate * 3.2;
+        const buf = actx.createBuffer(2, len, actx.sampleRate);
+        for (let ch = 0; ch < 2; ch++) {
+            const d = buf.getChannelData(ch);
+            for (let i = 0; i < len; i++)
+                d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8);
+        }
+        const c = actx.createConvolver();
+        c.buffer = buf;
+        return c;
+    }
+
+    /* ── Schedule one note (osc → filter → gain → dest) ─ */
+    function note(freq, type, time, dur, vol, detune, toRev) {
+        const osc = actx.createOscillator();
+        const flt = actx.createBiquadFilter();
+        const g   = actx.createGain();
+
+        osc.type          = type;
+        osc.frequency.value = freq;
+        osc.detune.value  = detune;
+
+        flt.type          = 'lowpass';
+        flt.frequency.value = (type === 'sine') ? 380 : 1100;
+        flt.Q.value       = 0.55;
+
+        const att = 1.4, rel = 1.8;
+        g.gain.setValueAtTime(0,   time);
+        g.gain.linearRampToValueAtTime(vol, time + att);
+        g.gain.setValueAtTime(vol, Math.max(time + att + 0.01, time + dur - rel));
+        g.gain.linearRampToValueAtTime(0,   time + dur);
+
+        osc.connect(flt);
+        flt.connect(g);
+        g.connect(master);
+        if (toRev && rev) g.connect(rev);
+
+        osc.start(time);
+        osc.stop(time + dur + 0.15);
+    }
+
+    /* ── Schedule next chord then re-queue ─────────────── */
+    function schedNext() {
+        if (!playing) return;
+        const now  = actx.currentTime;
+        const prog = PROG[beat % PROG.length];
+
+        /* Bass — deep sine */
+        note(prog.bass,       'sine',     now, CHORD_DUR, 0.10,  0, false);
+        note(prog.bass * 2,   'sine',     now, CHORD_DUR, 0.055, 0, false);
+
+        /* Pad — 3 slightly detuned triangle oscillators per chord note */
+        prog.notes.forEach(f => {
+            [-6, 0, 6].forEach(det =>
+                note(f, 'triangle', now, CHORD_DUR, 0.028, det, true)
+            );
+        });
+
+        beat++;
+        timer = setTimeout(schedNext, (CHORD_DUR - 0.5) * 1000);
+    }
+
+    /* ── Start generative engine ────────────────────────── */
+    function start() {
+        actx   = new (window.AudioContext || window.webkitAudioContext)();
+        master = actx.createGain();
+        master.gain.setValueAtTime(0, actx.currentTime);
+        master.gain.linearRampToValueAtTime(0.58, actx.currentTime + 2.8);
+        master.connect(actx.destination);
+
+        rev = buildReverb();
+        rev.connect(master);
+
+        schedNext();
+    }
+
+    /* ── Stop & clean up ─────────────────────────────────── */
+    function stop() {
+        clearTimeout(timer);
+        playing = false;
+        if (!master) return;
+        const now = actx.currentTime;
+        master.gain.cancelScheduledValues(now);
+        master.gain.setValueAtTime(master.gain.value, now);
+        master.gain.linearRampToValueAtTime(0, now + 1.1);
+        setTimeout(() => { try { actx.close(); } catch(e) {} actx = null; }, 1300);
+    }
+
+    btn.addEventListener('click', () => {
+        if (!playing) {
+            playing = true;
+            start();
+            btn.classList.add('playing');
+            btn.title = 'Music on — click to pause';
+        } else {
+            stop();
+            btn.classList.remove('playing');
+            btn.title = 'Toggle background music';
+        }
+    });
+
+    /* Resume on mobile after touch unlock */
+    document.body.addEventListener('touchstart', () => {
+        if (playing && actx && actx.state === 'suspended') actx.resume();
+    }, { once: true, passive: true });
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   MARQUEE — infinite GSAP horizontal scroll
+════════════════════════════════════════════════════════ */
+(function initMarquee() {
+    const track  = document.getElementById('mq-track');
+    if (!track) return;
+
+    const WORDS  = [
+        'Happy Birthday', 'Strong & Independent', 'Calm & Peaceful',
+        'Goes Out of Her Way', 'Quietly Focused', 'Genuinely Kind',
+        'Here\'s to You', 'Thank You for Everything', 'You Made It Easier'
+    ];
+    const SEP = '✦';
+
+    /* Build 2 identical copies for seamless looping */
+    [0, 1].forEach(() => {
+        WORDS.forEach(word => {
+            const sp = document.createElement('span');
+            sp.className = 'mq-item';
+            sp.textContent = word;
+            track.appendChild(sp);
+
+            const sep = document.createElement('span');
+            sep.className = 'mq-sep';
+            sep.textContent = SEP;
+            track.appendChild(sep);
+        });
+    });
+
+    /* After layout paint, animate -50% (one full copy) → seamless */
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            gsap.to(track, {
+                xPercent: -50,
+                duration: 32,
+                ease: 'none',
+                repeat: -1
+            });
+            /* Slow down on hover */
+            const strip = document.getElementById('marquee-strip');
+            strip.addEventListener('mouseenter', () =>
+                gsap.to(track, { timeScale: 0.25, duration: 0.6, ease: 'power2.out', overwrite: false })
+            , { passive: true });
+            strip.addEventListener('mouseleave', () =>
+                gsap.to(track, { timeScale: 1, duration: 0.6, ease: 'power2.in', overwrite: false })
+            , { passive: true });
+        });
+    });
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   HAPPY BIRTHDAY BUTTON — mega confetti burst
+════════════════════════════════════════════════════════ */
+(function hbdButton() {
+    const btn = document.getElementById('hbd-btn');
+    if (!btn) return;
+
+    let fired = 0;
+    btn.addEventListener('click', function() {
+        fired++;
+        const r  = this.getBoundingClientRect();
+        const cx = r.left + r.width  / 2;
+        const cy = r.top  + r.height / 2;
+
+        /* Escalate with each click */
+        const n = Math.min(60 + fired * 30, 200);
+        burstConfetti(cx, cy, n);
+        setTimeout(() => burstConfetti(cx - 130, cy - 70, Math.floor(n * 0.55)), 140);
+        setTimeout(() => burstConfetti(cx + 130, cy - 70, Math.floor(n * 0.55)), 270);
+        setTimeout(() => burstConfetti(cx,        cy - 140, Math.floor(n * 0.45)), 410);
+
+        /* Musical chord */
+        [660, 784, 880, 1046].forEach((f, i) =>
+            setTimeout(() => playChime(f, 0.85), i * 80)
+        );
+
+        /* Button spring */
+        gsap.timeline()
+            .to(this, { scale: 0.88, duration: 0.10, ease: 'power2.out' })
+            .to(this, { scale: 1.08, duration: 0.28, ease: 'back.out(3)' })
+            .to(this, { scale: 1.00, duration: 0.22, ease: 'power2.inOut' });
+
+        /* Gold ring rings */
+        [0, 160, 320].forEach(delay => {
+            setTimeout(() => {
+                const ring = document.createElement('div');
+                ring.style.cssText = `
+                    position:fixed; left:${cx}px; top:${cy}px;
+                    width:12px; height:12px; margin:-6px 0 0 -6px;
+                    border-radius:50%;
+                    border:1.5px solid rgba(212,170,114,0.70);
+                    pointer-events:none; z-index:599;
+                `;
+                document.body.appendChild(ring);
+                gsap.fromTo(ring,
+                    { scale: 0, opacity: 0.95 },
+                    { scale: 18, opacity: 0, duration: 1.10, ease: 'power2.out',
+                      onComplete: () => ring.remove() }
+                );
+            }, delay);
+        });
+    });
+})();
+
+
+/* ════════════════════════════════════════════════════════
+   FLOATING EMOJIS — bob + click interactions
+════════════════════════════════════════════════════════ */
+(function floatEmojis() {
+    /* gentle bob */
+    gsap.to('#fe-moon',  { y:-16, rotation:10,  duration:4.0, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to('#fe-spark', { y:-12, rotation:-8,  duration:2.9, ease:'sine.inOut', repeat:-1, yoyo:true });
+    gsap.to('#fe-cake',  { y:-14, rotation: 6,  duration:3.5, ease:'sine.inOut', repeat:-1, yoyo:true });
+
+    function ringRipple(el, color) {
+        const r  = el.getBoundingClientRect();
+        const cx = r.left + r.width/2, cy = r.top + r.height/2;
+        const d  = document.createElement('div');
+        d.style.cssText = `
+            position:fixed; left:${cx}px; top:${cy}px;
+            width:12px; height:12px; margin:-6px 0 0 -6px;
+            border-radius:50%; border:1.5px solid ${color};
+            pointer-events:none; z-index:601;
+        `;
+        document.body.appendChild(d);
+        gsap.fromTo(d, { scale:0, opacity:0.85 },
+            { scale:11, opacity:0, duration:0.95, ease:'power2.out',
+              onComplete:() => d.remove() });
+    }
+
+    function pop(el) {
+        gsap.timeline()
+            .to(el, { scale:1.85, duration:0.16, ease:'power2.out' })
+            .to(el, { scale:1.00, duration:0.55, ease:'elastic.out(1,0.45)' });
+    }
+
+    /* 🌙 — double purple ring */
+    document.getElementById('fe-moon').addEventListener('click', function() {
+        playChime(392, 0.90);
+        pop(this);
+        ringRipple(this, 'rgba(140,100,220,0.55)');
+        setTimeout(() => ringRipple(this, 'rgba(140,100,220,0.25)'), 210);
+    });
+
+    /* ✨ — 8 sparkle scatter */
+    document.getElementById('fe-spark').addEventListener('click', function() {
+        playChime(659, 0.55);
+        pop(this);
+        const r  = this.getBoundingClientRect();
+        const cx = r.left + r.width/2, cy = r.top + r.height/2;
+        for (let i = 0; i < 8; i++) {
+            const ang  = (i/8) * Math.PI * 2;
+            const dist = 36 + Math.random() * 24;
+            const sp   = document.createElement('div');
+            sp.textContent = '✦';
+            sp.style.cssText = `
+                position:fixed; left:${cx}px; top:${cy}px;
+                font-size:0.52rem; color:rgba(140,98,57,0.90);
+                pointer-events:none; z-index:602; line-height:1;
+            `;
+            document.body.appendChild(sp);
+            gsap.fromTo(sp,
+                { x:0, y:0, opacity:1, scale:0.45 },
+                { x:Math.cos(ang)*dist, y:Math.sin(ang)*dist,
+                  opacity:0, scale:1.4,
+                  duration:0.60 + Math.random()*0.28, ease:'power2.out',
+                  onComplete:() => sp.remove() });
+        }
+    });
+
+    /* 🍰 — big confetti burst */
+    document.getElementById('fe-cake').addEventListener('click', function() {
+        playChime(784, 0.75);
+        pop(this);
+        ringRipple(this, 'rgba(140,98,57,0.60)');
+        const r = this.getBoundingClientRect();
+        burstConfetti(r.left + r.width/2, r.top + r.height/2, 55);
+    });
+})();
+
+</script>
+</body>
+</html>
+
+<!--
+  ══════════════════════════════════════════════════════
+  HOW TO OPEN
+  ══════════════════════════════════════════════════════
+  Double-click birthday.html in any modern browser.
+  Both files must sit in the same folder:
+    • birthday.html
+    • Attached_image.png
+
+  ══════════════════════════════════════════════════════
+  INTERACTIVE MAP
+  ══════════════════════════════════════════════════════
+  🖱  Custom gold cursor ring (desktop only)
+      ↳ scales on hover over buttons/lines
+      ↳ squeezes on click, springs back
+      ↳ adapts colour on light sections
+  ─── Faint gold trail follows cursor
+  §1  Ken Burns zoom + hero parallax scroll
+      ↳ Animated vertical scroll indicator (dot in track)
+  §2  Character-by-character blur → reveal on scroll
+      ↳ Click any line → gold shimmer + chime + ripple
+  §3  Rows slide in from left on scroll
+      ↳ Click 💪 🌙 ✦ 🌸 to reveal hidden insights
+      ↳ Badge counts revealed secrets (confetti at 4/4)
+  §4  "But it did." lands with confetti + rising stars
+      ↳ "Send a wish" button → burst + triple ring + chime
+  🌙  Moon → double purple ring ripple
+  ✨  Spark → 8 gold ✦ scatter outward
+  🍰  Cake → mixed-shape confetti burst
+  ♪   Music toggle with animated wave bars
+  ══════════════════════════════════════════════════════
+-->
