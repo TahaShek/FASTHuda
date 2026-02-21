@@ -686,7 +686,7 @@ section { position:relative; z-index:2; overflow:hidden; }
 <!-- Tap-to-begin intro overlay -->
 <div id="intro-overlay" role="button" aria-label="Tap to begin">
     <span class="intro-icon">🎂</span>
-    <h2 class="intro-title">Happy Birthday,<br>Huda.</h2>
+    <h2 class="intro-title">Happy Birthday,<br> Huda FAST.</h2>
     <p class="intro-sub">Tap anywhere to begin</p>
     <span class="intro-line"></span>
 </div>
@@ -735,7 +735,7 @@ section { position:relative; z-index:2; overflow:hidden; }
 
     <div class="s1-body">
         <span class="s1-line-dec" id="s1-dec"></span>
-        <p class="s1-eyebrow" id="s1-eyebrow">— For you, FASTHuda</p>
+        <p class="s1-eyebrow" id="s1-eyebrow">— For you, Huda FAST</p>
 
         <h1 class="s1-title" id="s1-title">
             <span class="t-word">Happy</span>&nbsp;<span class="t-word">Birthday.</span>
@@ -1505,8 +1505,8 @@ ScrollTrigger.create({
 
 /* ════════════════════════════════════════════════════════
    INTRO OVERLAY + MUSIC
-   Overlay dismisses on first tap → music starts and loops
-   forever. Button toggles pause/resume after that.
+   Uses native rAF volume ramp — no GSAP on audio.volume
+   (GSAP volume tweens on <audio> are unreliable).
 ════════════════════════════════════════════════════════ */
 (function musicSetup() {
     const overlay = document.getElementById('intro-overlay');
@@ -1517,49 +1517,74 @@ ScrollTrigger.create({
 
     audio.volume = 0;
 
+    /* Smooth volume ramp using rAF — rock-solid */
+    function rampVolume(from, to, durationMs) {
+        audio.volume = from;
+        const start = performance.now();
+        function step(now) {
+            const t = Math.min((now - start) / durationMs, 1);
+            /* ease-out curve */
+            audio.volume = from + (to - from) * (1 - Math.pow(1 - t, 3));
+            if (t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
     function beginExperience() {
         if (dismissed) return;
         dismissed = true;
 
-        /* Fade overlay out */
+        /* Dismiss overlay */
         overlay.classList.add('hidden');
 
-        /* Start music with fade-in */
-        playing = true;
-        audio.play().then(() => {
-            gsap.to(audio, { volume: 0.32, duration: 2.6, ease: 'power2.inOut' });
-        }).catch(() => {});
-        btn.classList.add('playing');
-        btn.title = 'Music on — click to pause';
+        /* Play immediately — user gesture is active right now */
+        audio.currentTime = 0;
+        const promise = audio.play();
+        if (promise !== undefined) {
+            promise.then(() => {
+                /* Audio confirmed playing — fade volume in */
+                rampVolume(0, 0.35, 2800);
+                playing = true;
+                btn.classList.add('playing');
+                btn.title = 'Music on — click to pause';
+            }).catch(() => {
+                /* Shouldn't happen after tap, but just in case */
+                playing = false;
+            });
+        } else {
+            /* Older browsers — no promise */
+            rampVolume(0, 0.35, 2800);
+            playing = true;
+            btn.classList.add('playing');
+            btn.title = 'Music on — click to pause';
+        }
     }
 
-    /* Any interaction on the overlay begins the experience */
-    overlay.addEventListener('click',      beginExperience);
-    overlay.addEventListener('touchstart', beginExperience, { passive: true });
-    /* Also any keypress */
-    document.addEventListener('keydown', beginExperience, { once: true });
+    /* Overlay: click or touch triggers begin */
+    overlay.addEventListener('click',      beginExperience, { once: true });
+    overlay.addEventListener('touchend',   beginExperience, { once: true, passive: true });
+    document.addEventListener('keydown',   beginExperience, { once: true });
 
-    /* Music button toggles pause / resume AFTER overlay dismissed */
+    /* Music button — toggle after experience starts */
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (!dismissed) { beginExperience(); return; }
 
         if (playing) {
             playing = false;
-            gsap.to(audio, { volume: 0, duration: 0.8, ease: 'power2.in',
-                onComplete: () => audio.pause() });
+            rampVolume(audio.volume, 0, 700);
+            setTimeout(() => audio.pause(), 720);
             btn.classList.remove('playing');
             btn.title = 'Toggle background music';
         } else {
             playing = true;
-            audio.play().catch(() => {});
-            gsap.to(audio, { volume: 0.32, duration: 1.2, ease: 'power2.inOut' });
+            audio.play().then(() => rampVolume(0, 0.35, 1200)).catch(() => {});
             btn.classList.add('playing');
             btn.title = 'Music on — click to pause';
         }
     });
 
-    /* Re-play after iOS background/tab switch */
+    /* Resume after tab switch / iOS home button */
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden && dismissed && playing && audio.paused)
             audio.play().catch(() => {});
