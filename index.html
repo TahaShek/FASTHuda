@@ -1440,34 +1440,58 @@ ScrollTrigger.create({
 
 
 /* ════════════════════════════════════════════════════════
-   MUSIC TOGGLE — smooth volume fade
+   MUSIC — autoplay on load, fallback to first interaction
 ════════════════════════════════════════════════════════ */
 (function musicSetup() {
-    const audio   = document.getElementById('bg-music');
-    const btn     = document.getElementById('music-btn');
-    let playing   = false;
-    audio.volume  = 0;
+    const audio = document.getElementById('bg-music');
+    const btn   = document.getElementById('music-btn');
+    let playing = false;
+    audio.volume = 0;
 
-    btn.addEventListener('click', () => {
-        if (!playing) {
-            audio.play()
-                .then(() => gsap.to(audio, { volume:0.26, duration:1.8, ease:'power2.inOut' }))
-                .catch(() => { audio.volume = 0.26; });
-            btn.classList.add('playing');
-            btn.title = 'Music on — click to pause';
-        } else {
-            gsap.to(audio, { volume:0, duration:0.8, ease:'power2.in',
-                onComplete:() => audio.pause() });
-            btn.classList.remove('playing');
-            btn.title = 'Toggle background music';
-        }
-        playing = !playing;
+    function startMusic() {
+        if (playing) return;
+        playing = true;
+        audio.play()
+            .then(() => {
+                gsap.to(audio, { volume: 0.28, duration: 2.2, ease: 'power2.inOut' });
+                btn.classList.add('playing');
+                btn.title = 'Music on — click to pause';
+            })
+            .catch(() => {
+                /* Browser blocked autoplay — will retry on first interaction */
+                playing = false;
+            });
+    }
+
+    function stopMusic() {
+        if (!playing) return;
+        playing = false;
+        gsap.to(audio, { volume: 0, duration: 0.8, ease: 'power2.in',
+            onComplete: () => audio.pause() });
+        btn.classList.remove('playing');
+        btn.title = 'Toggle background music';
+    }
+
+    /* ── Try autoplay immediately on load ── */
+    startMusic();
+
+    /* ── Fallback: play on very first interaction anywhere on page ── */
+    const unlockEvents = ['click', 'touchstart', 'keydown', 'scroll'];
+    function unlockOnce() {
+        startMusic();
+        unlockEvents.forEach(ev =>
+            document.removeEventListener(ev, unlockOnce)
+        );
+    }
+    unlockEvents.forEach(ev =>
+        document.addEventListener(ev, unlockOnce, { once: true, passive: true })
+    );
+
+    /* ── Music button toggles on/off ── */
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation(); /* don't also trigger unlockOnce */
+        if (!playing) startMusic(); else stopMusic();
     });
-
-    /* Re-play after mobile unlock */
-    document.body.addEventListener('touchstart', () => {
-        if (playing && audio.paused) audio.play().catch(() => {});
-    }, { once:true, passive:true });
 })();
 
 
