@@ -630,8 +630,8 @@ section { position:relative; z-index:2; overflow:hidden; }
 <!-- Progress bar -->
 <div id="progress"></div>
 
-<!-- Background music — local Happy Birthday piano -->
-<audio id="bg-music" loop preload="auto">
+<!-- Background music — autoplay via muted→unmute trick -->
+<audio id="bg-music" autoplay loop muted preload="auto">
     <source src="./music.mp3" type="audio/mpeg">
 </audio>
 
@@ -1440,57 +1440,55 @@ ScrollTrigger.create({
 
 
 /* ════════════════════════════════════════════════════════
-   MUSIC — autoplay on load, fallback to first interaction
+   MUSIC — zero-click autoplay
+   Strategy: <audio autoplay muted> always plays (browsers
+   allow muted autoplay). We then unmute + fade volume in.
+   Fallback: if somehow still blocked, first interaction
+   on the page will trigger it silently.
 ════════════════════════════════════════════════════════ */
 (function musicSetup() {
     const audio = document.getElementById('bg-music');
     const btn   = document.getElementById('music-btn');
     let playing = false;
-    audio.volume = 0;
 
-    function startMusic() {
+    audio.volume = 0;
+    audio.muted  = true;   /* start muted so browser allows autoplay */
+
+    function unmuteAndPlay() {
         if (playing) return;
         playing = true;
-        audio.play()
-            .then(() => {
-                gsap.to(audio, { volume: 0.28, duration: 2.2, ease: 'power2.inOut' });
-                btn.classList.add('playing');
-                btn.title = 'Music on — click to pause';
-            })
-            .catch(() => {
-                /* Browser blocked autoplay — will retry on first interaction */
-                playing = false;
-            });
+        audio.muted = false;
+        audio.play().catch(() => {});
+        gsap.to(audio, { volume: 0.30, duration: 2.4, ease: 'power2.inOut' });
+        btn.classList.add('playing');
+        btn.title = 'Music on — click to pause';
     }
 
     function stopMusic() {
         if (!playing) return;
         playing = false;
-        gsap.to(audio, { volume: 0, duration: 0.8, ease: 'power2.in',
-            onComplete: () => audio.pause() });
+        gsap.to(audio, { volume: 0, duration: 0.9, ease: 'power2.in',
+            onComplete: () => { audio.pause(); audio.muted = true; } });
         btn.classList.remove('playing');
         btn.title = 'Toggle background music';
     }
 
-    /* ── Try autoplay immediately on load ── */
-    startMusic();
+    /* Unmute as soon as the audio element starts playing (muted) */
+    audio.addEventListener('playing', () => unmuteAndPlay(), { once: true });
 
-    /* ── Fallback: play on very first interaction anywhere on page ── */
-    const unlockEvents = ['click', 'touchstart', 'keydown', 'scroll'];
-    function unlockOnce() {
-        startMusic();
-        unlockEvents.forEach(ev =>
-            document.removeEventListener(ev, unlockOnce)
-        );
-    }
-    unlockEvents.forEach(ev =>
-        document.addEventListener(ev, unlockOnce, { once: true, passive: true })
+    /* Belt-and-suspenders: also unmute after 800 ms regardless */
+    setTimeout(unmuteAndPlay, 800);
+
+    /* Absolute fallback: first touch/click anywhere */
+    const unlock = () => { unmuteAndPlay(); };
+    ['click','touchstart','scroll','keydown'].forEach(ev =>
+        document.addEventListener(ev, unlock, { once: true, passive: true })
     );
 
-    /* ── Music button toggles on/off ── */
+    /* Manual toggle button */
     btn.addEventListener('click', (e) => {
-        e.stopPropagation(); /* don't also trigger unlockOnce */
-        if (!playing) startMusic(); else stopMusic();
+        e.stopPropagation();
+        if (!playing) unmuteAndPlay(); else stopMusic();
     });
 })();
 
